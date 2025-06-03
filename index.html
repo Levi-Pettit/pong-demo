@@ -5,14 +5,31 @@
   <meta charset="UTF-8" />
   <title>Pong Demo</title>
   <style>
-    canvas { 
-      display: block;
-      margin: 0 auto;
+    html, body {
+      margin: 0;
+      padding: 0;
       background: #000;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    canvas {
+      background: #000;
+      display: block;
+    }
+    #scoreboard {
+      position: absolute;
+      top: 20px;
+      font: 30px Arial, sans-serif;
+      color: #fff;
+      user-select: none;
     }
   </style>
 </head>
 <body>
+  <div id="scoreboard">0 : 0</div>
   <canvas id="pong" width="640" height="480"></canvas>
   <script src="pong.js"></script>
 </body>
