@@ -1,56 +1,154 @@
-// pong.js 
+// pong.js
 const canvas = document.getElementById("pong");
 const ctx = canvas.getContext("2d");
-const paddleWidth = 10, paddleHeight = 80;
-let ly = (canvas.height - paddleHeight) / 2;
-let ry = (canvas.height - paddleHeight) / 2;
-let ball = { x: canvas.width/2, y: canvas.height/2, vx: 3, vy: 2, r: 8 };
-function draw() {
-  // clear
-  ctx.fillStyle = "#000";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  // left paddle
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(10, ly, paddleWidth, paddleHeight);
-  // right paddle
-  ctx.fillRect(canvas.width - 20, ry, paddleWidth, paddleHeight);
-  // ball
+const scoreboard = document.getElementById("scoreboard");
+
+// Dimensions
+const PADDLE_WIDTH = 10;
+const PADDLE_HEIGHT = 80;
+const BALL_RADIUS = 8;
+
+// Paddle positions
+let leftY  = (canvas.height - PADDLE_HEIGHT) / 2;
+let rightY = (canvas.height - PADDLE_HEIGHT) / 2;
+
+// Ball state
+let ball = {
+  x: canvas.width / 2,
+  y: canvas.height / 2,
+  vx: 3,
+  vy: 2
+};
+
+// Scores
+let leftScore = 0;
+let rightScore = 0;
+
+// Draw functions
+function drawPaddles() {
+  // Left paddle (green)
+  ctx.fillStyle = "#0f0";
+  ctx.fillRect(10, leftY, PADDLE_WIDTH, PADDLE_HEIGHT);
+
+  // Right paddle (red)
+  ctx.fillStyle = "#f00";
+  ctx.fillRect(canvas.width - 10 - PADDLE_WIDTH, rightY, PADDLE_WIDTH, PADDLE_HEIGHT);
+}
+
+function drawBall() {
   ctx.beginPath();
-  ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2);
+  ctx.arc(ball.x, ball.y, BALL_RADIUS, 0, Math.PI * 2);
+  ctx.fillStyle = "#fff";
   ctx.fill();
 }
+
+function drawNet() {
+  const netWidth = 2;
+  const netHeight = 8;
+  ctx.fillStyle = "#555";
+  for (let y = 0; y < canvas.height; y += netHeight * 2) {
+    ctx.fillRect((canvas.width - netWidth) / 2, y, netWidth, netHeight);
+  }
+}
+
+function clearCanvas() {
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function updateScoreboard() {
+  scoreboard.textContent = `${leftScore} : ${rightScore}`;
+}
+
+function draw() {
+  clearCanvas();
+  drawNet();
+  drawPaddles();
+  drawBall();
+}
+
+function resetBall(winner) {
+  // Increment score
+  if (winner === "left")  leftScore++;
+  if (winner === "right") rightScore++;
+  updateScoreboard();
+
+  // Reset to center
+  ball.x = canvas.width / 2;
+  ball.y = canvas.height / 2;
+  // Flip direction toward the player who just lost
+  ball.vx = (winner === "left" ? 3 : -3);
+  ball.vy = 2 * (Math.random() > 0.5 ? 1 : -1);
+}
+
 function update() {
-  // basic ball movement + wall bounce
+  // Move ball
   ball.x += ball.vx;
   ball.y += ball.vy;
-  if (ball.y + ball.r > canvas.height || ball.y - ball.r < 0) {
+
+  // Top/bottom wall collision
+  if (ball.y - BALL_RADIUS < 0 || ball.y + BALL_RADIUS > canvas.height) {
     ball.vy = -ball.vy;
   }
-  // simple paddle collision
+
+  // Left paddle collision
   if (
-    (ball.x - ball.r < 20 && ball.y > ly && ball.y < ly + paddleHeight) ||
-    (ball.x + ball.r > canvas.width - 20 && ball.y > ry && ball.y < ry + paddleHeight)
+    ball.x - BALL_RADIUS < 10 + PADDLE_WIDTH &&
+    ball.y > leftY &&
+    ball.y < leftY + PADDLE_HEIGHT
   ) {
     ball.vx = -ball.vx;
+    // add slight speed variation
+    ball.vy += (Math.random() - 0.5) * 0.5;
   }
-  // reset if out of bounds
-  if (ball.x < 0 || ball.x > canvas.width) {
-    ball.x = canvas.width/2;
-    ball.y = canvas.height/2;
+
+  // Right paddle collision
+  if (
+    ball.x + BALL_RADIUS > canvas.width - 10 - PADDLE_WIDTH &&
+    ball.y > rightY &&
+    ball.y < rightY + PADDLE_HEIGHT
+  ) {
+    ball.vx = -ball.vx;
+    ball.vy += (Math.random() - 0.5) * 0.5;
   }
-  // basic AI for right paddle
-  ry += (ball.y - (ry + paddleHeight/2)) * 0.05;
+
+  // Score conditions
+  if (ball.x - BALL_RADIUS < 0) {
+    resetBall("right");
+  } else if (ball.x + BALL_RADIUS > canvas.width) {
+    resetBall("left");
+  }
+
+  // Simple AI for right paddle 
+  const paddleCenter = rightY + PADDLE_HEIGHT / 2;
+  if (ball.y < paddleCenter - 10) {
+    rightY -= 4;
+  } else if (ball.y > paddleCenter + 10) {
+    rightY += 4;
+  }
+  // Clamp right paddle
+  if (rightY < 0) rightY = 0;
+  if (rightY + PADDLE_HEIGHT > canvas.height) {
+    rightY = canvas.height - PADDLE_HEIGHT;
+  }
 }
-// player control (mouse)
-canvas.addEventListener("mousemove", e => {
+
+// Player control (mouse)
+canvas.addEventListener("mousemove", (e) => {
   const rect = canvas.getBoundingClientRect();
-  ly = e.clientY - rect.top - paddleHeight/2;
-  if (ly < 0) ly = 0;
-  if (ly + paddleHeight > canvas.height) ly = canvas.height - paddleHeight;
+  leftY = e.clientY - rect.top - PADDLE_HEIGHT / 2;
+  if (leftY < 0) leftY = 0;
+  if (leftY + PADDLE_HEIGHT > canvas.height) {
+    leftY = canvas.height - PADDLE_HEIGHT;
+  }
 });
-function loop() {
+
+function gameLoop() {
   update();
   draw();
-  requestAnimationFrame(loop);
+  requestAnimationFrame(gameLoop);
 }
-loop();
+
+// Initialize
+updateScoreboard();
+requestAnimationFrame(gameLoop);
